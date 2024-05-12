@@ -41,11 +41,40 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const foodCollection=client.db('shareTheMeal').collection('foodCollection')
-    // const countriesData=client.db('shareTheMeal').collection('countriesData')
-    app.get('/food',async(req,res)=>{ 
-      const cursor=foodCollection.find()
+    const reqFoodCollection=client.db('shareTheMeal').collection('reqFoodCollection')
+   
+    app.get('/food',async(req,res)=>{
+      const status=req.query.status
+      const search=req.query.search
+      const sort=req.query.sort
+      let query={
+      }
+      if(status)query.foodStatus=status
+      let options = {}
+      if (sort) options = { sort: { expiredTime: sort === 'asc' ? 1 : -1 } }
+      if(search)query.foodName={ $regex: search, $options: 'i' }
+      const cursor=foodCollection.find(query,options)
       const result =await cursor.toArray()
-      res.send(result)  
+      res.send(result)   
+    })
+    app.put('/food/:id',async(req,res)=>{
+      const id=req.params.id
+      const filter={_id:new ObjectId(id)}
+      const options={upsert :true} 
+    const updateData=req.body
+    const food={
+      $set:{
+       ...updateData 
+      }
+    }
+    const result=await foodCollection.updateOne(filter,food,options)
+    res.send(result)
+    })
+    app.delete('/food/:id',async(req,res)=>{
+      const id=req.params.id
+      const query={_id:new ObjectId(id)}
+      const result =foodCollection.deleteOne(query)
+      res.send(result)
     })
     app.get('/details/:id',async(req,res)=>{
       const id=req.params.id
@@ -53,12 +82,28 @@ async function run() {
       const result =await foodCollection.findOne(query)
       res.send(result) 
     })
-    // api post   
+    // api post    
     app.post('/addFood', async(req,res)=>{
       const addFood=req.body
       const result = await foodCollection.insertOne(addFood)
       res.send(result)
     })
+    app.get('/reqFood',async(req,res)=>{
+      const email = req.query.email
+      let query={
+      }
+      if(email)query.requesterEmail=email
+      console.log(query,email);
+      const cursor=reqFoodCollection.find(query)
+      const result =await cursor.toArray()
+      res.send(result)    
+    })
+    app.post('/reqFood', async(req,res)=>{
+      const addFood=req.body
+      console.log(addFood);
+      const result = await reqFoodCollection.insertOne(addFood)
+      res.send(result)
+    }) 
 
 
 
