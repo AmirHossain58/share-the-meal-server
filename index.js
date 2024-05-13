@@ -20,6 +20,23 @@ app.use(express.json())
 app.use(cookieParser())
 
 
+// verify jwt middleware
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token
+  if (!token) return res.status(401).send({ message: 'unauthorized access' })
+  if (token) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+        console.log(err)
+        return res.status(401).send({ message: 'unauthorized access' })
+      }
+      console.log(decoded)
+
+      req.user = decoded
+      next()
+    })
+  }
+}
 
 
 
@@ -42,6 +59,30 @@ async function run() {
   try {
     const foodCollection=client.db('shareTheMeal').collection('foodCollection')
     const reqFoodCollection=client.db('shareTheMeal').collection('reqFoodCollection')
+
+     // jwt generate
+     app.post('/jwt', async (req, res) => {
+      const email = req.body
+      const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '365d',
+      })
+      res
+        .cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+        })
+        .send({ success: true })
+    })
+
+    // Clear token on logout
+    app.post('/logout', async (req, res) => {
+      const user = req.body;
+      console.log('logging out', user);
+      res.clearCookie('token', { maxAge: 0 }).send({ success: true })
+  })
+
+
    
     app.get('/food',async(req,res)=>{
       const status=req.query.status
@@ -57,7 +98,7 @@ async function run() {
       const result =await cursor.toArray()
       res.send(result)   
     })
-    app.put('/food/:id',async(req,res)=>{
+    app.put('/food/:id',verifyToken,async(req,res)=>{
       const id=req.params.id
       const filter={_id:new ObjectId(id)}
       const options={upsert :true} 
@@ -70,7 +111,7 @@ async function run() {
     const result=await foodCollection.updateOne(filter,food,options)
     res.send(result)
     })
-    app.delete('/food/:id',async(req,res)=>{
+    app.delete('/food/:id',verifyToken,async(req,res)=>{
       const id=req.params.id
       const query={_id:new ObjectId(id)}
       const result =foodCollection.deleteOne(query)
@@ -88,7 +129,7 @@ async function run() {
       const result = await foodCollection.insertOne(addFood)
       res.send(result)
     })
-    app.get('/reqFood',async(req,res)=>{
+    app.get('/reqFood',verifyToken,async(req,res)=>{
       const email = req.query.email
       let query={
       }
@@ -98,15 +139,12 @@ async function run() {
       const result =await cursor.toArray()
       res.send(result)    
     })
-    app.post('/reqFood', async(req,res)=>{
+    app.post('/reqFood',verifyToken, async(req,res)=>{
       const addFood=req.body
       console.log(addFood);
       const result = await reqFoodCollection.insertOne(addFood)
       res.send(result)
     }) 
-
-
-
 
 
 
