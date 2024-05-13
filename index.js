@@ -30,7 +30,7 @@ const verifyToken = (req, res, next) => {
         console.log(err)
         return res.status(401).send({ message: 'unauthorized access' })
       }
-      console.log(decoded)
+      console.log(decoded) 
 
       req.user = decoded
       next()
@@ -85,11 +85,13 @@ async function run() {
 
    
     app.get('/food',async(req,res)=>{
+      const email11 = req.query.email
       const status=req.query.status
       const search=req.query.search
       const sort=req.query.sort
       let query={
-      }
+      } 
+      if(email11)query['donator.email']=email11
       if(status)query.foodStatus=status
       let options = {}
       if (sort) options = { sort: { expiredTime: sort === 'asc' ? 1 : -1 } }
@@ -117,7 +119,7 @@ async function run() {
       const result =foodCollection.deleteOne(query)
       res.send(result)
     })
-    app.get('/details/:id',async(req,res)=>{
+    app.get('/details/:id',verifyToken,async(req,res)=>{
       const id=req.params.id
       const query={_id:new ObjectId(id)}
       const result =await foodCollection.findOne(query)
@@ -134,14 +136,12 @@ async function run() {
       let query={
       }
       if(email)query.requesterEmail=email
-      console.log(query,email);
       const cursor=reqFoodCollection.find(query)
       const result =await cursor.toArray()
       res.send(result)    
     })
     app.post('/reqFood',verifyToken, async(req,res)=>{
       const addFood=req.body
-      console.log(addFood);
       const result = await reqFoodCollection.insertOne(addFood)
       res.send(result)
     }) 
