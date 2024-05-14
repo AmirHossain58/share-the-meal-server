@@ -77,7 +77,7 @@ async function run() {
         .send({ success: true })
     })
 
-    // Clear token on logout
+    // Clear token on logout      
     app.post('/logout', async (req, res) => {
       const user = req.body;
       console.log('logging out', user);
