@@ -151,10 +151,11 @@ async function run() {
       const result =await cursor.toArray()
       res.send(result)    
     })
+    // 
     app.post('/reqFood',verifyToken, async(req,res)=>{
       const addFood=req.body
       const result = await reqFoodCollection.insertOne(addFood)
-      res.send(result)
+      res.send(result)  
     }) 
 
 
